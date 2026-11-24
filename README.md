@@ -791,6 +791,6 @@ The original plan listed **87 features**. Honest status of the finished system:
 🏫 [UPBRIGHT] | Stu ID: [UB004HNDCS]  
 📧 GitHub: [@Rishas2006](https://github.com/Rishas2006)
 
-*Submitted for: UB004CS Assignment 008*
+*Submitted for: UB004CS Assignment 008.*
 
 </div>

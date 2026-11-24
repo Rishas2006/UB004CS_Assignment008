@@ -1,0 +1,21 @@
+# Optional: a local PostgreSQL 16 (instead of Supabase) for development.
+#   docker compose up -d db
+#   .env:  DB_HOST=localhost  DB_PORT=5432  DB_USER=postgres  DB_PASSWORD=rootpass  DB_NAME=rh_hms   (and leave DATABASE_URL empty)
+#   npm run db:setup && npm run dev
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: rootpass
+      POSTGRES_DB: rh_hms
+    ports: ['5432:5432']
+    volumes: [dbdata:/var/lib/postgresql/data]
+  api:
+    build: .
+    depends_on: [db]
+    env_file: .env
+    environment: { DATABASE_URL: '', DB_HOST: db, DB_USER: postgres, DB_PASSWORD: rootpass, DB_NAME: rh_hms }
+    ports: ['4000:4000']
+volumes:
+  dbdata:

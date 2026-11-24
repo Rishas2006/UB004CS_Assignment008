@@ -1,0 +1,75 @@
+### RH HMS API examples (VS Code "REST Client" extension or copy into Postman)
+@base = http://localhost:4000/api/v1
+
+### 1. Register a patient (OTP is printed in the server console when SMTP is not configured)
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{ "name": "Test Patient", "email": "test@example.com", "phone": "+94771234567", "password": "Str0ng!Pass" }
+
+### 2. Verify OTP
+POST {{base}}/auth/verify-otp
+Content-Type: application/json
+
+{ "email": "test@example.com", "code": "123456" }
+
+### 3. Login (seeded demo patient)
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "patient@example.com", "password": "Staff@12345" }
+
+###
+@token = {{login.response.body.accessToken}}
+
+### 4. Doctors, filters and live slots
+GET {{base}}/doctors?dept=cardiology&lang=si
+###
+GET {{base}}/doctors/d1/slots?date=2026-11-16
+###
+GET {{base}}/doctors/d1/earliest
+
+### 5. Book an appointment (logged in)
+POST {{base}}/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "doctorId": "d1", "date": "2026-11-16", "time": "09:15", "type": "VIDEO", "reason": "Follow-up" }
+
+### 6. Guest booking (no login)
+POST {{base}}/appointments
+Content-Type: application/json
+
+{ "doctorId": "d6", "date": "2026-11-17", "time": "08:00", "name": "Walk In", "phone": "+94771112233" }
+
+### 7. My appointments / records / health card
+GET {{base}}/appointments/mine
+Authorization: Bearer {{token}}
+###
+GET {{base}}/patients/me/records
+Authorization: Bearer {{token}}
+###
+GET {{base}}/patients/me/health-card
+Authorization: Bearer {{token}}
+
+### 8. Pay an invoice (PayHere sandbox form fields)
+POST {{base}}/billing/invoices/INVOICE_ID/pay
+Authorization: Bearer {{token}}
+
+### 9. Emergency ambulance request (public) and tracking
+POST {{base}}/ambulance/requests
+Content-Type: application/json
+
+{ "callerName": "Kamal", "phone": "+94771234567", "address": "45 Galle Road, Colombo 03", "lat": 6.9, "lng": 79.85 }
+###
+GET {{base}}/ambulance/track/AMB-00000
+
+### 10. AI Doc
+POST {{base}}/ai/chat
+Content-Type: application/json
+
+{ "lang": "en", "messages": [{ "role": "user", "content": "What are the pharmacy hours?" }] }
+
+### 11. Live queue board
+GET {{base}}/queue/colombo

@@ -76,6 +76,66 @@ router.post(
   }),
 );
 
+// ---------- FIX: PayHere browser return - fixes localhost PENDING ----------
+// PayHere redirects browser here after payment. notify_url never reaches localhost,
+// so we mark PAID here from return_url. This is for demo/localhost only.
+router.get(
+  "/payhere/return",
+  asyncHandler(async (req, res) => {
+    const { order_id, status_code } = req.query;
+    console.log("[payhere] return", req.query);
+    if (order_id && Number(status_code) === 2) {
+      await tx(async (c) => {
+        const pay = (
+          await c.query("SELECT * FROM payments WHERE order_id = $1 FOR UPDATE", [
+            order_id,
+          ])
+        ).rows[0];
+        if (pay && pay.status !== "SUCCESS") {
+          await c.query(
+            "UPDATE payments SET status = 'SUCCESS', status_code = 2 WHERE id = $1",
+            [pay.id],
+          );
+          await c.query(`UPDATE invoices SET status = 'PAID' WHERE id = $1`, [
+            pay.invoice_id,
+          ]);
+        }
+      });
+      return res.redirect(`${config.frontendUrl}/portal/patient?paid=1`);
+    }
+    return res.redirect(`${config.frontendUrl}/portal/patient?paid=0`);
+  }),
+);
+
+// PayHere sometimes POSTs to return_url, handle that too
+router.post(
+  "/payhere/return",
+  express.urlencoded({ extended: false }),
+  asyncHandler(async (req, res) => {
+    const { order_id, status_code } = { ...req.body, ...req.query };
+    if (order_id && Number(status_code) === 2) {
+      await tx(async (c) => {
+        const pay = (
+          await c.query("SELECT * FROM payments WHERE order_id = $1 FOR UPDATE", [
+            order_id,
+          ])
+        ).rows[0];
+        if (pay && pay.status !== "SUCCESS") {
+          await c.query(
+            "UPDATE payments SET status = 'SUCCESS', status_code = 2 WHERE id = $1",
+            [pay.id],
+          );
+          await c.query(`UPDATE invoices SET status = 'PAID' WHERE id = $1`, [
+            pay.invoice_id,
+          ]);
+        }
+      });
+      return res.redirect(`${config.frontendUrl}/portal/patient?paid=1`);
+    }
+    return res.redirect(`${config.frontendUrl}/portal/patient?paid=0`);
+  }),
+);
+
 router.use(authenticate);
 
 // ---------- invoices ----------
@@ -184,7 +244,7 @@ router.post(
       method: "POST",
       fields: {
         merchant_id: config.payhere.merchantId,
-        return_url: `${config.frontendUrl}/portal/patient?paid=1`,
+        return_url: `${config.publicApiUrl}/api/v1/billing/payhere/return`,
         cancel_url: `${config.frontendUrl}/portal/patient?paid=0`,
         notify_url: `${config.publicApiUrl}/api/v1/billing/payhere/notify`,
         order_id: orderId,
